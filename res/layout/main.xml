@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:id="@+id/root_view"
     >
 <TextView
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:text="Hello World, MainActivity"
     />
-</LinearLayout>
+
+<Button
+    android:id="@+id/zip_button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="32dp"
+    android:text="Show zip" />
+
+</FrameLayout>
 

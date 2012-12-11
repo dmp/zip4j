@@ -1,51 +1,36 @@
 
 package net.itsuha.android.zip4j;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.text.Collator;
-import java.util.Comparator;
-import java.util.List;
-
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
 
 import org.apache.commons.io.IOUtils;
 
-import android.annotation.TargetApi;
-import android.app.Activity;
-import android.content.Context;
 import android.content.res.AssetManager;
-import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ListFragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.Loader;
-import android.support.v4.widget.SearchViewCompat;
-import android.support.v4.widget.SearchViewCompat.OnQueryTextListenerCompat;
-import android.text.TextUtils;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 
-public class MainActivity extends Activity
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
+
+public class MainActivity extends FragmentActivity
 {
+    private static final String FRAGMENT_TAG = "zip";
     private static final String TAG = MainActivity.class.getSimpleName();
-    private static final String ZIP_NAME = "zip4j_src_1.3.1.zip";
+    public static final String ZIP_NAME = "zip4j_src_1.3.1.zip";
     private File mFile;
 
     /** Called when the activity is first created. */
@@ -62,6 +47,23 @@ public class MainActivity extends Activity
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+
+        Button b = (Button) findViewById(R.id.zip_button);
+        b.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FragmentManager manager = getSupportFragmentManager();
+                FragmentTransaction ft = manager.beginTransaction();
+                ZipListFragment f = new ZipListFragment();
+                // Retain fields of Fragment as-is on configuration changes
+                // "This can only be used with fragments not in the back stack"
+                // http://developer.android.com/reference/android/support/v4/app/Fragment.html#setRetainInstance(boolean)
+                f.setRetainInstance(true);
+                ft.add(R.id.root_view, f, FRAGMENT_TAG);
+                ft.commit();
+            }
+        });
+
     }
 
     public void readAssetsZip() throws ZipException {
@@ -85,325 +87,35 @@ public class MainActivity extends Activity
         is.close();
     }
 
-    /**
-     * This class holds the per-item data in our Loader.
+    /*
+     * (non-Javadoc)
+     * @see android.app.Activity#onKeyUp(int, android.view.KeyEvent)
      */
-    public static class AppEntry {
-        private String mFileName;
-        private long mSize;
-        private boolean mDirectory;
-        private String mDate;
-        private Drawable mIcon;
-
-        public String getFileName() {
-            return mFileName;
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            FragmentManager fm = getSupportFragmentManager();
+            Fragment f = fm.findFragmentByTag(FRAGMENT_TAG);
+            if (f != null && f instanceof FragmentBackKeyListener) {
+                if (!((FragmentBackKeyListener) f).onBackKeyUp()) {
+                    FragmentTransaction ft = fm.beginTransaction();
+                    ft.remove(f);
+                    ft.commit();
+                }
+                return true;
+            }
         }
-
-        public void setFileName(String filename) {
-            this.mFileName = filename;
-        }
-
-        public long getSize() {
-            return mSize;
-        }
-
-        public void setSize(long size) {
-            this.mSize = size;
-        }
-
-        public boolean isDirectory() {
-            return mDirectory;
-        }
-
-        public void setmDirectory(boolean directory) {
-            this.mDirectory = directory;
-        }
-
-        public String getDate() {
-            return mDate;
-        }
-
-        public void setDate(String date) {
-            this.mDate = date;
-        }
-
-        public Drawable getIcon() {
-            return mIcon;
-        }
-
-        public void setIcon(Drawable icon) {
-            mIcon = icon;
-        }
+        return super.onKeyUp(keyCode, event);
     }
 
     /**
-     * Perform alphabetical comparison of application entry objects.
+     * ZipListFragment must implement this interface.
      */
-    public static final Comparator<AppEntry> ALPHA_COMPARATOR = new Comparator<AppEntry>() {
-        private final Collator sCollator = Collator.getInstance();
-
-        @Override
-        public int compare(AppEntry object1, AppEntry object2) {
-            return sCollator.compare(object1.getFileName(), object2.getFileName());
-        }
-    };
-
-    /**
-     * A custom Loader that loads all of the installed applications.
-     */
-    public static class AppListLoader extends AsyncTaskLoader<List<AppEntry>> {
-        List<AppEntry> mApps;
-
-        public AppListLoader(Context context) {
-            super(context);
-        }
-
+    public interface FragmentBackKeyListener {
         /**
-         * This is where the bulk of our work is done. This function is called
-         * in a background thread and should generate a new set of data to be
-         * published by the loader.
+         * @return True if the listener has consumed the event, false otherwise.
          */
-        @Override
-        public List<AppEntry> loadInBackground() {
-            // Retrieve all known applications.
-
-            // Create corresponding array of entries and load their labels.
-
-            // Sort the list.
-
-            // Done!
-            return null;
-        }
-
-        /**
-         * Called when there is new data to deliver to the client. The super
-         * class will take care of delivering it; the implementation here just
-         * adds a little more logic.
-         */
-        @Override
-        public void deliverResult(List<AppEntry> apps) {
-            if (isReset()) {
-                // An async query came in while the loader is stopped. We
-                // don't need the result.
-                if (apps != null) {
-                    onReleaseResources(apps);
-                }
-            }
-            List<AppEntry> oldApps = apps;
-            mApps = apps;
-
-            if (isStarted()) {
-                // If the Loader is currently started, we can immediately
-                // deliver its results.
-                super.deliverResult(apps);
-            }
-
-            // At this point we can release the resources associated with
-            // 'oldApps' if needed; now that the new result is delivered we
-            // know that it is no longer in use.
-            if (oldApps != null) {
-                onReleaseResources(oldApps);
-            }
-        }
-
-        /**
-         * Handles a request to start the Loader.
-         */
-        @Override
-        protected void onStartLoading() {
-            if (mApps != null) {
-                // If we currently have a result available, deliver it
-                // immediately.
-                deliverResult(mApps);
-            }
-        }
-
-        /**
-         * Handles a request to stop the Loader.
-         */
-        @Override
-        protected void onStopLoading() {
-            // Attempt to cancel the current load task if possible.
-            cancelLoad();
-        }
-
-        /**
-         * Handles a request to cancel a load.
-         */
-        @Override
-        public void onCanceled(List<AppEntry> apps) {
-            super.onCanceled(apps);
-
-            // At this point we can release the resources associated with 'apps'
-            // if needed.
-            onReleaseResources(apps);
-        }
-
-        /**
-         * Handles a request to completely reset the Loader.
-         */
-        @Override
-        protected void onReset() {
-            super.onReset();
-
-            // Ensure the loader is stopped
-            onStopLoading();
-
-            // At this point we can release the resources associated with 'apps'
-            // if needed.
-            if (mApps != null) {
-                onReleaseResources(mApps);
-                mApps = null;
-            }
-        }
-
-        /**
-         * Helper function to take care of releasing resources associated with
-         * an actively loaded data set.
-         */
-        protected void onReleaseResources(List<AppEntry> apps) {
-            // For a simple List<> there is nothing to do. For something
-            // like a Cursor, we would close it here.
-        }
+        public boolean onBackKeyUp();
     }
 
-    public static class AppListAdapter extends ArrayAdapter<AppEntry> {
-        private final LayoutInflater mInflater;
-
-        public AppListAdapter(Context context) {
-            super(context, android.R.layout.simple_list_item_2);
-            mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        }
-
-        public void setData(List<AppEntry> data) {
-            clear();
-            if (data != null) {
-                for (AppEntry e : data) {
-                    add(e);
-                }
-            }
-        }
-
-        /**
-         * Populate new items in the list.
-         */
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View view;
-
-            if (convertView == null) {
-                view = mInflater.inflate(R.layout.zip_list_items, parent, false);
-            } else {
-                view = convertView;
-            }
-
-            AppEntry item = getItem(position);
-            ((ImageView) view.findViewById(R.id.ziplist_icon))
-                    .setImageDrawable(item.getIcon());
-            ((TextView) view.findViewById(R.id.ziplist_filename))
-                    .setText(item.getFileName());
-            ((TextView) view.findViewById(R.id.ziplist_size))
-                    .setText((String.valueOf(item.getSize())));
-            ((TextView) view.findViewById(R.id.ziplist_date))
-                    .setText(item.getDate());
-
-            return view;
-        }
-    }
-
-    public static class AppListFragment extends ListFragment
-            implements LoaderManager.LoaderCallbacks<List<AppEntry>> {
-
-        // This is the Adapter being used to display the list's data.
-        AppListAdapter mAdapter;
-
-        // If non-null, this is the current filter the user has provided.
-        String mCurFilter;
-
-        @Override
-        public void onActivityCreated(Bundle savedInstanceState) {
-            super.onActivityCreated(savedInstanceState);
-
-            // Give some text to display if there is no data. In a real
-            // application this would come from a resource.
-            setEmptyText("No applications");
-
-            // We have a menu item to show in action bar.
-            setHasOptionsMenu(true);
-
-            // Create an empty adapter we will use to display the loaded data.
-            mAdapter = new AppListAdapter(getActivity());
-            setListAdapter(mAdapter);
-
-            // Start out with a progress indicator.
-            setListShown(false);
-
-            // Prepare the loader. Either re-connect with an existing one,
-            // or start a new one.
-            getLoaderManager().initLoader(0, null, this);
-        }
-
-        @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-        @Override
-        public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-            // Place an action bar item for searching.
-            MenuItem item = menu.add("Search");
-            item.setIcon(android.R.drawable.ic_menu_search);
-            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM
-                    | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
-            View sv = SearchViewCompat.newSearchView(getActivity());
-            SearchViewCompat.setOnQueryTextListener(sv, new OnQueryTextListenerCompat() {
-                @Override
-                public boolean onQueryTextChange(String newText) {
-                    // Called when the action bar search text has changed. Since
-                    // this
-                    // is a simple array adapter, we can just have it do the
-                    // filtering.
-                    mCurFilter = !TextUtils.isEmpty(newText) ? newText : null;
-                    mAdapter.getFilter().filter(mCurFilter);
-                    return true;
-                }
-
-                @Override
-                public boolean onQueryTextSubmit(String query) {
-                    // Don't care about this.
-                    return true;
-                }
-
-            });
-            item.setActionView(sv);
-        }
-
-        @Override
-        public void onListItemClick(ListView l, View v, int position, long id) {
-            // Insert desired behavior here.
-            Log.i("LoaderCustom", "Item clicked: " + id);
-        }
-
-        @Override
-        public Loader<List<AppEntry>> onCreateLoader(int id, Bundle args) {
-            // This is called when a new Loader needs to be created. This
-            // sample only has one Loader with no arguments, so it is simple.
-            return new AppListLoader(getActivity());
-        }
-
-        @Override
-        public void onLoadFinished(Loader<List<AppEntry>> loader, List<AppEntry> data) {
-            // Set the new data in the adapter.
-            mAdapter.setData(data);
-
-            // The list should now be shown.
-            if (isResumed()) {
-                setListShown(true);
-            } else {
-                setListShownNoAnimation(true);
-            }
-        }
-
-        @Override
-        public void onLoaderReset(Loader<List<AppEntry>> loader) {
-            // Clear the data in the adapter.
-            mAdapter.setData(null);
-        }
-    }
 }
