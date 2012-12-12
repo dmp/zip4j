@@ -178,8 +178,9 @@ public class ZipListFragment extends ListFragment
         }
 
         private ZipDirectory readZipInFilesDir() throws ZipException {
-            File f = new File(mContext.getFilesDir(), MainActivity.ZIP_NAME);
+            File f = new File(mContext.getFilesDir(), MainActivity.ZIP_NAME[1]);
             ZipFile z = new ZipFile(f);
+            z.setFileNameCharset("Shift_JIS");
             ZipDirectory root = new ZipDirectory();
             List<FileHeader> l = (List<FileHeader>) z.getFileHeaders();
             for (FileHeader h : l) {

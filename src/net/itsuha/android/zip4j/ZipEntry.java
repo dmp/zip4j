@@ -147,13 +147,21 @@ public class ZipEntry {
         }
 
         public void addFile(String relativePath, long size, int lastmod) {
+            if (TextUtils.isEmpty(relativePath)) {
+                throw new IllegalArgumentException();
+            }
             String[] pathArray = relativePath.split("/");
-            LinkedList<String> path = new LinkedList<String>();
-            Collections.addAll(path, pathArray);
+            if (pathArray.length == 1) {
+                add(new ZipEntry(relativePath, relativePath, size, String.valueOf(lastmod), null));
+            } else {
+                LinkedList<String> path = new LinkedList<String>();
+                Collections.addAll(path, pathArray);
 
-            String file = path.removeLast();
-            addDirectory(path)
-                    .add(new ZipEntry(relativePath, file, size, String.valueOf(lastmod), null));
+                String file = path.removeLast();
+                addDirectory(path)
+                        .add(new ZipEntry(relativePath, file, size, String.valueOf(lastmod), null));
+
+            }
         }
     }
 }

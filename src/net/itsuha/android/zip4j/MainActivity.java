@@ -1,10 +1,6 @@
 
 package net.itsuha.android.zip4j;
 
-import net.lingala.zip4j.core.ZipFile;
-import net.lingala.zip4j.exception.ZipException;
-import net.lingala.zip4j.model.FileHeader;
-
 import org.apache.commons.io.IOUtils;
 
 import android.content.res.AssetManager;
@@ -13,7 +9,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -24,13 +19,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
 
 public class MainActivity extends FragmentActivity
 {
-    private static final String FRAGMENT_TAG = "zip";
+    @SuppressWarnings("unused")
     private static final String TAG = MainActivity.class.getSimpleName();
-    public static final String ZIP_NAME = "zip4j_src_1.3.1.zip";
+    private static final String FRAGMENT_TAG = "zip";
+    public static final String[] ZIP_NAME = { "zip4j_src_1.3.1.zip", "7zip-default.zip" };
+
     private File mFile;
 
     /** Called when the activity is first created. */
@@ -40,10 +36,7 @@ public class MainActivity extends FragmentActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         try {
-            copyAssetsZipToExternal();
-            readAssetsZip();
-        } catch (ZipException e) {
-            e.printStackTrace();
+            copyAssetsZipToFiles();
         } catch (IOException e1) {
             e1.printStackTrace();
         }
@@ -66,22 +59,12 @@ public class MainActivity extends FragmentActivity
 
     }
 
-    public void readAssetsZip() throws ZipException {
-        ZipFile z = new ZipFile(mFile);
-        List<FileHeader> l = (List<FileHeader>) z.getFileHeaders();
-        for (FileHeader h : l) {
-            Log.i(TAG, "Name : " + h.getFileName());
-            Log.d(TAG, "directory: " + h.isDirectory());
-            Log.d(TAG, "size: " + h.getUncompressedSize());
-        }
-    }
-
-    public void copyAssetsZipToExternal() throws IOException {
+    public void copyAssetsZipToFiles() throws IOException {
         AssetManager am = getAssets();
         File targetDir = getFilesDir();
-        mFile = new File(targetDir, ZIP_NAME);
+        mFile = new File(targetDir, ZIP_NAME[1]);
         OutputStream os = new FileOutputStream(mFile);
-        InputStream is = am.open(ZIP_NAME);
+        InputStream is = am.open(ZIP_NAME[1]);
         IOUtils.copy(is, os);
         os.close();
         is.close();
