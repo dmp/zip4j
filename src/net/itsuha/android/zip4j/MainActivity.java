@@ -12,7 +12,9 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -52,11 +54,19 @@ public class MainActivity extends FragmentActivity
                 // "This can only be used with fragments not in the back stack"
                 // http://developer.android.com/reference/android/support/v4/app/Fragment.html#setRetainInstance(boolean)
                 f.setRetainInstance(true);
-                ft.add(R.id.root_view, f, FRAGMENT_TAG);
+                Bundle args = new Bundle();
+                args.putString(ZipListFragment.ARGUMENT_ZIP_FILE,
+                        ZIP_NAME[((Spinner) findViewById(R.id.zip_file_spinner))
+                                .getSelectedItemPosition()]);
+                f.setArguments(args);
+                ft.add(R.id.fragment, f, FRAGMENT_TAG);
                 ft.commit();
             }
         });
-
+        Spinner sp = (Spinner) findViewById(R.id.zip_file_spinner);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_dropdown_item, ZIP_NAME);
+        sp.setAdapter(adapter);
     }
 
     public void copyAssetsZipToFiles() throws IOException {

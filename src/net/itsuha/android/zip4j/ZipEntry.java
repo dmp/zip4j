@@ -1,7 +1,8 @@
 
 package net.itsuha.android.zip4j;
 
-import android.graphics.drawable.Drawable;
+import net.lingala.zip4j.model.FileHeader;
+
 import android.text.TextUtils;
 
 import java.util.Collections;
@@ -12,30 +13,17 @@ import java.util.List;
  * This class holds the per-item data in our Loader.
  */
 public class ZipEntry {
-    protected String mFullPath;
     protected String mName;
-    protected long mSize;
-    protected String mDate;
-    protected Drawable mIcon;
+    protected FileHeader mFileHeader;
     protected ZipDirectory mParent;
 
     public ZipEntry() {
     }
 
-    public ZipEntry(String fullPath, String name, long size, String date, Drawable icon) {
-        mFullPath = fullPath;
+    public ZipEntry(String name, FileHeader fileHeader) {
+        super();
         mName = name;
-        mSize = size;
-        mDate = date;
-        mIcon = icon;
-    }
-
-    public String getFullPath() {
-        return mFullPath;
-    }
-
-    public void setFullPath(String fullPath) {
-        mFullPath = fullPath;
+        mFileHeader = fileHeader;
     }
 
     public String getName() {
@@ -46,36 +34,20 @@ public class ZipEntry {
         mName = name;
     }
 
-    public long getSize() {
-        return mSize;
-    }
-
-    public void setSize(long size) {
-        mSize = size;
-    }
-
-    public String getDate() {
-        return mDate;
-    }
-
-    public void setDate(String date) {
-        mDate = date;
-    }
-
-    public Drawable getIcon() {
-        return mIcon;
-    }
-
-    public void setIcon(Drawable icon) {
-        mIcon = icon;
-    }
-
     public ZipDirectory getParent() {
         return mParent;
     }
 
     public boolean hasParent() {
         return mParent != null;
+    }
+
+    public FileHeader getFileHeader() {
+        return mFileHeader;
+    }
+
+    public void setFileHeader(FileHeader fileHeader) {
+        mFileHeader = fileHeader;
     }
 
     public static class ZipDirectory extends ZipEntry {
@@ -146,20 +118,20 @@ public class ZipEntry {
             return addDirectory(path);
         }
 
-        public void addFile(String relativePath, long size, int lastmod) {
+        public void addFile(String relativePath, FileHeader fileHeader) {
             if (TextUtils.isEmpty(relativePath)) {
                 throw new IllegalArgumentException();
             }
             String[] pathArray = relativePath.split("/");
             if (pathArray.length == 1) {
-                add(new ZipEntry(relativePath, relativePath, size, String.valueOf(lastmod), null));
+                add(new ZipEntry(relativePath, fileHeader));
             } else {
                 LinkedList<String> path = new LinkedList<String>();
                 Collections.addAll(path, pathArray);
 
                 String file = path.removeLast();
                 addDirectory(path)
-                        .add(new ZipEntry(relativePath, file, size, String.valueOf(lastmod), null));
+                        .add(new ZipEntry(file, fileHeader));
 
             }
         }

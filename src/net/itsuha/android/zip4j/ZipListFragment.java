@@ -6,14 +6,17 @@ import net.itsuha.android.zip4j.ZipEntry.ZipDirectory;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
+import net.lingala.zip4j.util.Zip4jUtil;
+
+import org.apache.commons.io.IOUtils;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,9 +25,15 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.Collator;
+import java.text.DateFormat;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -40,6 +49,8 @@ public class ZipListFragment extends ListFragment
      */
     private static final int LOADER_ID = 0;
 
+    public static final String ARGUMENT_ZIP_FILE = "arg_zipfile";
+
     // This is the Adapter being used to display the list's data.
     ZipListAdapter mAdapter;
 
@@ -47,6 +58,7 @@ public class ZipListFragment extends ListFragment
     String mCurFilter;
 
     ZipListLoader mLoader;
+    static String mFileName;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -60,6 +72,7 @@ public class ZipListFragment extends ListFragment
         setHasOptionsMenu(true);
 
         // Create an empty adapter we will use to display the loaded data.
+        mFileName = getArguments().getString(ARGUMENT_ZIP_FILE);
         mAdapter = new ZipListAdapter(getActivity());
         setListAdapter(mAdapter);
 
@@ -77,8 +90,21 @@ public class ZipListFragment extends ListFragment
         if (item instanceof ZipDirectory) {
             mLoader.cd(item.getName());
         } else {
-            // TODO Insert desired behavior here.
-            Log.i("LoaderCustom", "Item clicked: " + id);
+            try {
+                String path = Environment.getExternalStorageDirectory() + "/" + item.getName();
+                File f = new File(path);
+                FileOutputStream fos = new FileOutputStream(f);
+                InputStream is = mLoader.mZipFile.getInputStream(item.getFileHeader());
+                IOUtils.copy(is, fos);
+                IOUtils.closeQuietly(fos);
+                IOUtils.closeQuietly(is);
+            } catch (ZipException e) {
+                e.printStackTrace();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -126,6 +152,7 @@ public class ZipListFragment extends ListFragment
         List<ZipEntry> mItems;
         ZipDirectory mBackendTree = null;
         Context mContext;
+        ZipFile mZipFile;
 
         public ZipListLoader(Context context) {
             super(context);
@@ -166,20 +193,17 @@ public class ZipListFragment extends ListFragment
             root.add(bar);
             ZipEntry hoge = new ZipEntry();
             hoge.setName("hoge");
-            hoge.setDate("2012-12-11");
-            hoge.setSize(42);
             foo.add(hoge);
             ZipEntry fuga = new ZipEntry();
             fuga.setName("fuga");
-            fuga.setDate("2012-12-12");
-            fuga.setSize(1024);
             root.add(fuga);
             return root;
         }
 
         private ZipDirectory readZipInFilesDir() throws ZipException {
-            File f = new File(mContext.getFilesDir(), MainActivity.ZIP_NAME[1]);
+            File f = new File(mContext.getFilesDir(), mFileName);
             ZipFile z = new ZipFile(f);
+            mZipFile = z;
             z.setFileNameCharset("Shift_JIS");
             ZipDirectory root = new ZipDirectory();
             List<FileHeader> l = (List<FileHeader>) z.getFileHeaders();
@@ -187,7 +211,7 @@ public class ZipListFragment extends ListFragment
                 if (h.isDirectory()) {
                     root.addDirectory(h.getFileName());
                 } else {
-                    root.addFile(h.getFileName(), h.getUncompressedSize(), h.getLastModFileTime());
+                    root.addFile(h.getFileName(), h);
                 }
             }
             return root;
@@ -350,16 +374,27 @@ public class ZipListFragment extends ListFragment
                 ((TextView) view.findViewById(R.id.ziplist_date))
                         .setText("");
             } else {
-                // ((ImageView) view.findViewById(R.id.ziplist_icon))
-                // .setImageDrawable(item.getIcon());
+                view.findViewById(R.id.ziplist_icon).setVisibility(View.INVISIBLE);
                 ((TextView) view.findViewById(R.id.ziplist_filename))
                         .setText(item.getName());
+                FileHeader h = item.getFileHeader();
                 ((TextView) view.findViewById(R.id.ziplist_size))
-                        .setText(String.valueOf(item.getSize()));
+                        .setText(String.valueOf(h.getUncompressedSize()));
+                long time = Zip4jUtil.dosToJavaTme(h.getLastModFileTime());
+                DateFormat sdf = getDateFormatInstance();
                 ((TextView) view.findViewById(R.id.ziplist_date))
-                        .setText(item.getDate());
+                        .setText(sdf.format(new Date(time)));
             }
             return view;
+        }
+
+        private DateFormat mSDF;
+
+        private DateFormat getDateFormatInstance() {
+            if (mSDF == null) {
+                mSDF = DateFormat.getDateTimeInstance();
+            }
+            return mSDF;
         }
     }
 }

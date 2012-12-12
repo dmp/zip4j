@@ -1,22 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:id="@+id/root_view"
     >
-<TextView
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
-    android:text="Hello World, MainActivity"
-    />
+
+<Spinner
+    android:id="@+id/zip_file_spinner"
+    android:layout_width="wrap_content"
+    android:layout_height="48dp"
+    android:layout_alignParentLeft="true"
+    android:layout_alignParentTop="true"
+    android:layout_marginLeft="8dp"
+    android:layout_marginTop="8dp"
+    android:layout_toLeftOf="@+id/zip_button" />
 
 <Button
     android:id="@+id/zip_button"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_margin="32dp"
+    android:layout_alignBottom="@+id/zip_file_spinner"
+    android:layout_alignParentRight="true"
+    android:layout_alignTop="@+id/zip_file_spinner"
+    android:layout_marginLeft="8dp"
+    android:layout_marginRight="8dp"
     android:text="Show zip" />
 
-</LinearLayout>
+<FrameLayout
+    android:id="@+id/fragment"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignLeft="@+id/zip_file_spinner"
+    android:layout_alignParentBottom="true"
+    android:layout_alignRight="@+id/zip_button"
+    android:layout_below="@+id/zip_file_spinner"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp" />
+
+</RelativeLayout>
 
