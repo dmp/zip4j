@@ -27,8 +27,7 @@ public class MainActivity extends FragmentActivity
     @SuppressWarnings("unused")
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final String FRAGMENT_TAG = "zip";
-    public static final String[] ZIP_NAME = { "zip4j_src_1.3.1.zip", "7zip-default.zip" };
-
+    private String[] mZipFiles;
     private File mFile;
 
     /** Called when the activity is first created. */
@@ -37,8 +36,13 @@ public class MainActivity extends FragmentActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
         try {
-            copyAssetsZipToFiles();
+            AssetManager am = getAssets();
+            mZipFiles = am.list("");
+            for (String f : mZipFiles) {
+                copyAssetsZipToFiles(f);
+            }
         } catch (IOException e1) {
             e1.printStackTrace();
         }
@@ -56,7 +60,7 @@ public class MainActivity extends FragmentActivity
                 f.setRetainInstance(true);
                 Bundle args = new Bundle();
                 args.putString(ZipListFragment.ARGUMENT_ZIP_FILE,
-                        ZIP_NAME[((Spinner) findViewById(R.id.zip_file_spinner))
+                        mZipFiles[((Spinner) findViewById(R.id.zip_file_spinner))
                                 .getSelectedItemPosition()]);
                 f.setArguments(args);
                 ft.add(R.id.fragment, f, FRAGMENT_TAG);
@@ -65,16 +69,16 @@ public class MainActivity extends FragmentActivity
         });
         Spinner sp = (Spinner) findViewById(R.id.zip_file_spinner);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_dropdown_item, ZIP_NAME);
+                android.R.layout.simple_spinner_dropdown_item, mZipFiles);
         sp.setAdapter(adapter);
     }
 
-    public void copyAssetsZipToFiles() throws IOException {
+    public void copyAssetsZipToFiles(String fileName) throws IOException {
         AssetManager am = getAssets();
         File targetDir = getFilesDir();
-        mFile = new File(targetDir, ZIP_NAME[1]);
+        mFile = new File(targetDir, fileName);
         OutputStream os = new FileOutputStream(mFile);
-        InputStream is = am.open(ZIP_NAME[1]);
+        InputStream is = am.open(fileName);
         IOUtils.copy(is, os);
         os.close();
         is.close();

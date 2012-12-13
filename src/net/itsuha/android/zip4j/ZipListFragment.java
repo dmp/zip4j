@@ -2,6 +2,7 @@
 package net.itsuha.android.zip4j;
 
 import net.itsuha.android.zip4j.MainActivity.FragmentBackKeyListener;
+import net.itsuha.android.zip4j.PasswordDialog.PasswordDialogCallback;
 import net.itsuha.android.zip4j.ZipEntry.ZipDirectory;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
@@ -17,12 +18,14 @@ import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,14 +45,13 @@ import java.util.List;
 
 public class ZipListFragment extends ListFragment
         implements LoaderManager.LoaderCallbacks<List<ZipEntry>>
-        , FragmentBackKeyListener {
+        , FragmentBackKeyListener, PasswordDialogCallback {
 
-    /**
-     * 
-     */
     private static final int LOADER_ID = 0;
 
     public static final String ARGUMENT_ZIP_FILE = "arg_zipfile";
+
+    private static final String FRAGMENT_TAG = "password";
 
     // This is the Adapter being used to display the list's data.
     ZipListAdapter mAdapter;
@@ -58,7 +60,8 @@ public class ZipListFragment extends ListFragment
     String mCurFilter;
 
     ZipListLoader mLoader;
-    static String mFileName;
+    String mFileName;
+    String mPassword;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -90,21 +93,59 @@ public class ZipListFragment extends ListFragment
         if (item instanceof ZipDirectory) {
             mLoader.cd(item.getName());
         } else {
-            try {
-                String path = Environment.getExternalStorageDirectory() + "/" + item.getName();
-                File f = new File(path);
-                FileOutputStream fos = new FileOutputStream(f);
-                InputStream is = mLoader.mZipFile.getInputStream(item.getFileHeader());
-                IOUtils.copy(is, fos);
-                IOUtils.closeQuietly(fos);
-                IOUtils.closeQuietly(is);
-            } catch (ZipException e) {
-                e.printStackTrace();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (item.getFileHeader().isEncrypted()) {
+                if (TextUtils.isEmpty(mPassword)) {
+                    PasswordDialog dialog = new PasswordDialog();
+                    Bundle args = new Bundle();
+                    args.putSerializable(PasswordDialog.ARGUMENT_ZIPENTRY, item);
+                    dialog.setArguments(args);
+                    dialog.setTargetFragment(this, 0);
+                    dialog.setRetainInstance(true);
+                    dialog.show(getFragmentManager(), FRAGMENT_TAG);
+                } else {
+                    openZipFile(item, mPassword);
+                }
+            } else {
+                openZipFile(item, null);
             }
+        }
+    }
+
+    private void openZipFile(ZipEntry entry, String password) {
+        FileOutputStream fos = null;
+        InputStream is = null;
+        File f = null;
+        try {
+            String path = Environment.getExternalStorageDirectory() + "/" + entry.getName();
+            f = new File(path);
+            fos = new FileOutputStream(f);
+            final ZipFile z = mLoader.mZipFile;
+            if (!TextUtils.isEmpty(password)) {
+                z.setPassword(password);
+            }
+            is = z.getInputStream(entry.getFileHeader());
+            IOUtils.copy(is, fos);
+            fos.close();
+            is.close();
+        } catch (ZipException e) {
+            Toast.makeText(getActivity(), "Wrong password", Toast.LENGTH_LONG).show();
+            mPassword = null;
+            if (f != null) {
+                f.delete();
+            }
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            Toast.makeText(getActivity(), "Wrong password", Toast.LENGTH_LONG).show();
+            mPassword = null;
+            if (f != null) {
+                f.delete();
+            }
+            e.printStackTrace();
+        } finally {
+            IOUtils.closeQuietly(fos);
+            IOUtils.closeQuietly(is);
         }
     }
 
@@ -112,7 +153,7 @@ public class ZipListFragment extends ListFragment
     public Loader<List<ZipEntry>> onCreateLoader(int id, Bundle args) {
         // This is called when a new Loader needs to be created. This
         // sample only has one Loader with no arguments, so it is simple.
-        mLoader = new ZipListLoader(getActivity());
+        mLoader = new ZipListLoader(getActivity(), mFileName);
         return mLoader;
     }
 
@@ -145,6 +186,28 @@ public class ZipListFragment extends ListFragment
         }
     }
 
+    /*
+     * (non-Javadoc)
+     * @see
+     * net.itsuha.android.zip4j.PasswordDialog.PasswordDialogCallback#onOkButtonPressed(net.itsuha
+     * .android.zip4j.ZipEntry, java.lang.String)
+     */
+    @Override
+    public void onOkButtonPressed(ZipEntry entry, String password) {
+        mPassword = password;
+        openZipFile(entry, password);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see net.itsuha.android.zip4j.PasswordDialog.PasswordDialogCallback#onCancel()
+     */
+    @Override
+    public void onCancel() {
+        // TODO Auto-generated method stub
+
+    }
+
     /**
      * A custom Loader that loads all of the installed applications.
      */
@@ -153,10 +216,12 @@ public class ZipListFragment extends ListFragment
         ZipDirectory mBackendTree = null;
         Context mContext;
         ZipFile mZipFile;
+        String mFileName;
 
-        public ZipListLoader(Context context) {
+        public ZipListLoader(Context context, String fileName) {
             super(context);
             mContext = context.getApplicationContext();
+            mFileName = fileName;
         }
 
         /**
@@ -185,27 +250,13 @@ public class ZipListFragment extends ListFragment
             return mBackendTree.getChildren();
         }
 
-        private ZipDirectory createDummyData() {
-            ZipDirectory root = new ZipDirectory();
-            ZipDirectory foo = new ZipDirectory("foo");
-            root.add(foo);
-            ZipDirectory bar = new ZipDirectory("bar");
-            root.add(bar);
-            ZipEntry hoge = new ZipEntry();
-            hoge.setName("hoge");
-            foo.add(hoge);
-            ZipEntry fuga = new ZipEntry();
-            fuga.setName("fuga");
-            root.add(fuga);
-            return root;
-        }
-
         private ZipDirectory readZipInFilesDir() throws ZipException {
             File f = new File(mContext.getFilesDir(), mFileName);
             ZipFile z = new ZipFile(f);
             mZipFile = z;
             z.setFileNameCharset("Shift_JIS");
             ZipDirectory root = new ZipDirectory();
+            @SuppressWarnings("unchecked")
             List<FileHeader> l = (List<FileHeader>) z.getFileHeaders();
             for (FileHeader h : l) {
                 if (h.isDirectory()) {
@@ -397,4 +448,5 @@ public class ZipListFragment extends ListFragment
             return mSDF;
         }
     }
+
 }

@@ -5,6 +5,7 @@ import net.lingala.zip4j.model.FileHeader;
 
 import android.text.TextUtils;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,7 +13,8 @@ import java.util.List;
 /**
  * This class holds the per-item data in our Loader.
  */
-public class ZipEntry {
+@SuppressWarnings("serial")
+public class ZipEntry implements Serializable{
     protected String mName;
     protected FileHeader mFileHeader;
     protected ZipDirectory mParent;
