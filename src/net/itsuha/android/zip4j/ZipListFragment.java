@@ -100,7 +100,6 @@ public class ZipListFragment extends ListFragment
                     args.putSerializable(PasswordDialog.ARGUMENT_ZIPENTRY, item);
                     dialog.setArguments(args);
                     dialog.setTargetFragment(this, 0);
-                    dialog.setRetainInstance(true);
                     dialog.show(getFragmentManager(), FRAGMENT_TAG);
                 } else {
                     openZipFile(item, mPassword);
